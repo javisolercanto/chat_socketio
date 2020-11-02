@@ -1,67 +1,117 @@
 <!DOCTYPE HTML>
 
 <html>
-   <head>
-    <script src="socket.io.js"></script>
-      <script type = "text/javascript">
-         let nickname = "Mr Anderson";
-         let DEBUG = true;
-         function WebSocketChat() {              
 
+<head>
+   <script src="socket.io.js"></script>
+</head>
 
-            if ("WebSocket" in window) {
-               if (DEBUG) console.log("WebSocket is supported by your Browser!");
-               const socket = io();
+<body>
 
-               let sendBtn = document.getElementById('send');
-               sendBtn.onclick = function(){
-                let inputMessage = document.getElementById('message');
-                socket.emit('newMessage',`${nickname}: ${inputMessage.value}`)
-               }
-               
-              
-               
-               socket.on('connect', () => {
-                  socket.emit('hello',`${nickname} connected to the chat`);
-               });
-               /*ws.onopen = function() {                  
-                  // Web Socket is connected, send data using send()
-                  ws.send(`${nickname} connected to the chat`);
-                  if (DEBUG) console.log(`${nickname} connected to the chat`)                  
-               };*/
-				
-               /*ws.onmessage = function (evt) { 
-                  var received_msg = evt.data;
-                  let messagesDiv=document.getElementById("chatMessages");
-                  let messageEl = document.createElement('span');
-                  messageEl.innerHTML = received_msg;
+   <header>
+      <form>
+         <label>Nickname: </label>
+         <input id="nicknameInput" type="text" name="nickname" />
+         <select id="nicknameColor" name="color">
+            <option value="red" selected>Red</option>
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="black">Black</option>
+         </select>
+         <button id="createProfileButton">Create Profile</button>
+      </form>
+   </header>
 
-                  messagesDiv.insertBefore(messageEl,messagesDiv.firstChild);
-                  if (DEBUG) console.log("Message is received...");
-               };*/
-				
-               /*ws.onclose = function() { 
-                  
-                  // websocket is closed.
-                  alert("Connection is closed..."); 
-               };*/
-            } else {
-              
-               // The browser doesn't support WebSocket
-               alert("WebSocket NOT supported by your Browser!");
-            }
+   <section id="chatMessages">
+
+   </section>
+
+   <input type="text" id="message" name="message" /><button id="send" disabled>SEND</button>
+
+   <script type="text/javascript">
+
+      let DEBUG = true;
+
+      let messagesDiv = document.getElementById("chatMessages");
+      let createProfileButton = document.getElementById('createProfileButton');
+      let nicknameInput = document.getElementById('nicknameInput');
+      let nicknameColor = document.getElementById('nicknameColor');
+
+      let sendBtn = document.getElementById('send');
+      let user = { nickname: "", color: "", lastmsg: "" };
+
+      createProfileButton.onclick = (event) => {
+         event.preventDefault();
+         if (nicknameInput.value.length > 0) {
+            user.nickname = nicknameInput.value;
+            user.color = nicknameColor.value;
+            sendBtn.disabled = false;
          }
-         
-      </script>
-		
-   </head>
-   
-   <body>
-     <div id="chatMessages"> </div>
-     <input type="text" id="message" name="message" /><button id="send">SEND</button>
+      }
 
-      <script>
-          WebSocketChat();
-      </script>
-   </body>
+      function WebSocketChat() {
+         if ("WebSocket" in window) {
+            if (DEBUG) console.log("WebSocket is supported by your Browser!");
+            const socket = io();
+
+            sendBtn.onclick = function () {
+               let inputMessage = document.getElementById('message');
+               user.lastmsg = inputMessage.value;
+               socket.emit('newMessage', user);
+            };
+
+            socket.on('connect', () => {
+               socket.emit('hello', `${user.nickname} connected to the chat`);
+            });
+
+            socket.on('chat message', (user) => {
+               let name = document.createElement('span');
+               name.innerHTML = user.nickname + ": ";
+               name.style.color = user.color;
+
+               let msg = document.createElement('span');
+               msg.innerHTML = user.lastmsg;
+
+               let line = document.createElement('p');
+               line.appendChild(name);
+               line.appendChild(msg);
+
+               messagesDiv.appendChild(line);
+            });
+
+
+            /*ws.onopen = function() {                  
+               // Web Socket is connected, send data using send()
+               ws.send(`${nickname} connected to the chat`);
+               if (DEBUG) console.log(`${nickname} connected to the chat`)                  
+            };*/
+
+            /*ws.onmessage = function (evt) { 
+               var received_msg = evt.data;
+               let messagesDiv=document.getElementById("chatMessages");
+               let messageEl = document.createElement('span');
+               messageEl.innerHTML = received_msg;
+
+               messagesDiv.insertBefore(messageEl,messagesDiv.firstChild);
+               if (DEBUG) console.log("Message is received...");
+            };*/
+
+            /*ws.onclose = function() { 
+               
+               // websocket is closed.
+               alert("Connection is closed..."); 
+            };*/
+         } else {
+
+            // The browser doesn't support WebSocket
+            alert("WebSocket NOT supported by your Browser!");
+         }
+      }
+
+   </script>
+   <script>
+      WebSocketChat();
+   </script>
+</body>
+
 </html>

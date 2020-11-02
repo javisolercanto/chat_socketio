@@ -16,11 +16,12 @@ io.on('connect', (socket) => {
     });
     socket.on('newMessage', data => {
         console.log('new', data);
+        socket.emit('chat message', data)
     });
-    
+
 });
 
 http.listen(666, () => {
-  console.log('listening on *:666');
+    console.log('listening on *:666');
 });
 
