@@ -84,7 +84,6 @@
       let user = { nickname: "", color: "", lastmsg: "", room: "general" };
 
       function WebSocketChat() {
-
          user.nickname = prompt("Select your nickname");
          nicknameInput.value = user.nickname;
          if ("WebSocket" in window) {
@@ -110,26 +109,35 @@
 
             joinGame.onclick = function (event) {
                event.preventDefault();
-               user.room = "room";
                console.log("joining", user);
-               socket.emit('join', user);
+               socket.emit('join game', user);
             };
 
             socket.on('connect', () => {
                socket.emit('hello', `${user.nickname} connected to the chat`);
             });
-
-            socket.on('joined player', (data) => {
+            socket.on('join', (data) => {
+               console.log('join', data);
                let msg = `
                   <p style="clear: both; text-align: center;">${data.nickname} joined the room</p>
                `
+               let parser = new DOMParser();
+               let element = parser.parseFromString(msg, "text/html");
+
+               messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
+            });
+            socket.on('joined player', (data) => {
+               let msg = `
+                  <p style="clear: both; text-align: center;">${data.players[0]} joined your game</p>
+               `
+
+               user.room = data.id;
 
                let parser = new DOMParser();
                let element = parser.parseFromString(msg, "text/html");
 
                messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
             });
-
             socket.on('chat message', (data) => {
                console.log('Message recibido', data);
                let isOwner = user.nickname == data.nickname;

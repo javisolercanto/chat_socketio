@@ -2,6 +2,7 @@ const express = require('express');
 let app = express();
 const http = require('http').createServer(app);
 let io = require('socket.io')(http);
+let gameControler = require('./public/controllers/gameController.js');
 
 
 app.use(express.static('public'));
@@ -16,20 +17,21 @@ io.on('connect', (socket) => {
     });
     socket.on('newMessage', data => {
         console.log('msg', data);
-        io.to(data.room.name).emit('chat message', data);
+        io.in(data.room).emit('chat message', data);
     });
     socket.on('join', data => {
-        console.log('join', data);
-        socket.join(data.room.name);
-        io.to(data.room.name).emit('joined player', data);
-        
-        /* socket.emit('chat message', data) */
+        console.log('joined to general room', data);
+        socket.join('general');
+        io.sockets.in('general').emit('join', data);
+    });
+    socket.on('join game', data => {
+        console.log('joined to game', data);
+        let game = gameControler.getCurrentGame(data.nickname);
+        socket.leave(data.room);
+        socket.join(game.id);
 
-        /**
-         {id: xxx, players: [], counter: zzz}
-         */
-
-        /* socket.to().emit(); */
+        io.sockets.in(game.id).emit('joined player', game);
+        console.log(JSON.stringify(game));
     });
 });
 
