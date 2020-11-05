@@ -8,10 +8,50 @@
 
 <body>
 
+   <style>
+      .container-chat {
+         background-color: #F6F6F6;
+         padding: 40px;
+         height: 300px;
+         width: 400px;
+         overflow: scroll;
+      }
+
+      .container-message {
+         display: block;
+         width: auto;
+         height: fit-content;
+         clear: both;
+         margin: 5px;
+      }
+
+      .message {
+         width: 150px;
+         height: fit-content;
+         display: block;
+         border-radius: 15px;
+         padding: 10px;
+         clear: both;
+      }
+
+      .ext-message {
+         background-color: #DBDBDB;
+         color: black;
+         float: left;
+
+      }
+
+      .own-message {
+         background-color: #00C533;
+         color: white;
+         float: right;
+      }
+   </style>
+
    <header>
       <form>
          <label>Nickname: </label>
-         <input id="nicknameInput" type="text" name="nickname" />
+         <input disabled id="nicknameInput" type="text" name="nickname" />
          <select id="nicknameColor" name="color">
             <option value="red" selected>Red</option>
             <option value="green">Green</option>
@@ -19,10 +59,12 @@
             <option value="black">Black</option>
          </select>
          <button id="createProfileButton">Create Profile</button>
+         <br>
+         <button disabled id="joinGame">Join Game</button>
       </form>
    </header>
 
-   <section id="chatMessages">
+   <section class="container-chat" id="chatMessages">
 
    </section>
 
@@ -38,69 +80,75 @@
       let nicknameColor = document.getElementById('nicknameColor');
 
       let sendBtn = document.getElementById('send');
-      let user = { nickname: "", color: "", lastmsg: "" };
-
-      createProfileButton.onclick = (event) => {
-         event.preventDefault();
-         if (nicknameInput.value.length > 0) {
-            user.nickname = nicknameInput.value;
-            user.color = nicknameColor.value;
-            sendBtn.disabled = false;
-         }
-      }
+      let joinGame = document.getElementById('joinGame');
+      let user = { nickname: "", color: "", lastmsg: "", room: "general" };
 
       function WebSocketChat() {
+
+         user.nickname = prompt("Select your nickname");
+         nicknameInput.value = user.nickname;
          if ("WebSocket" in window) {
             if (DEBUG) console.log("WebSocket is supported by your Browser!");
             const socket = io();
 
+            createProfileButton.onclick = (event) => {
+               event.preventDefault();
+               user.color = nicknameColor.value;
+               sendBtn.disabled = false;
+               joinGame.disabled = false;
+               createProfileButton.disabled = true;
+
+               socket.emit('join', user);
+            }
+
             sendBtn.onclick = function () {
                let inputMessage = document.getElementById('message');
                user.lastmsg = inputMessage.value;
+               console.log(user);
                socket.emit('newMessage', user);
+            };
+
+            joinGame.onclick = function (event) {
+               event.preventDefault();
+               user.room = "room";
+               console.log("joining", user);
+               socket.emit('join', user);
             };
 
             socket.on('connect', () => {
                socket.emit('hello', `${user.nickname} connected to the chat`);
             });
 
-            socket.on('chat message', (user) => {
-               let name = document.createElement('span');
-               name.innerHTML = user.nickname + ": ";
-               name.style.color = user.color;
+            socket.on('joined player', (data) => {
+               let msg = `
+                  <p style="clear: both; text-align: center;">${data.nickname} joined the room</p>
+               `
 
-               let msg = document.createElement('span');
-               msg.innerHTML = user.lastmsg;
+               let parser = new DOMParser();
+               let element = parser.parseFromString(msg, "text/html");
 
-               let line = document.createElement('p');
-               line.appendChild(name);
-               line.appendChild(msg);
-
-               messagesDiv.appendChild(line);
+               messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
             });
 
+            socket.on('chat message', (data) => {
+               console.log('Message recibido', data);
+               let isOwner = user.nickname == data.nickname;
 
-            /*ws.onopen = function() {                  
-               // Web Socket is connected, send data using send()
-               ws.send(`${nickname} connected to the chat`);
-               if (DEBUG) console.log(`${nickname} connected to the chat`)                  
-            };*/
+               let msg = `
+               <div class="container-message">
+                  <span class="message-author" style="color: ${data.color}; float: ${isOwner ? 'right' : 'left'};" >${data.nickname}:</span>
+                  <div class="${isOwner ? 'message  own-message' : 'message  ext-message'}">
+                     <span>${data.lastmsg}</span>
+                  </div>
+               </div>
+               `
 
-            /*ws.onmessage = function (evt) { 
-               var received_msg = evt.data;
-               let messagesDiv=document.getElementById("chatMessages");
-               let messageEl = document.createElement('span');
-               messageEl.innerHTML = received_msg;
+               let parser = new DOMParser();
+               let element = parser.parseFromString(msg, "text/html");
 
-               messagesDiv.insertBefore(messageEl,messagesDiv.firstChild);
-               if (DEBUG) console.log("Message is received...");
-            };*/
+               messagesDiv.appendChild(element.getElementsByTagName('div')[0]);
+            });
 
-            /*ws.onclose = function() { 
-               
-               // websocket is closed.
-               alert("Connection is closed..."); 
-            };*/
          } else {
 
             // The browser doesn't support WebSocket
