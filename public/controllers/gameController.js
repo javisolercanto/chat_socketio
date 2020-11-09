@@ -5,10 +5,10 @@ const gameController = () => {
     let countDown;
 
 
-    let getCurrentGame = (nickname) => {
+    let getCurrentGame = (nickname, card) => {
         if (currentGame.size == 0) {
             currentGame.set('id',Math.round(Math.random()*10000000));
-            currentGame.set('listPlayers',[nickname]);
+            currentGame.set('listPlayers',[{nickname, card}]);
             currentGame.set('countDown',secsUntilBegin);
             
             setTimeout(() => {
@@ -22,7 +22,7 @@ const gameController = () => {
             },1000);
         }else{
             let listUsers = currentGame.get('listPlayers');
-            listUsers.push(nickname);
+            listUsers.push({nickname, card});
             currentGame.set('listPlayers',listUsers);
             if (listUsers.length >= maxUsers){
                setTimeout(()=>{currentGame=new Map();

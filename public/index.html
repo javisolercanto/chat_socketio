@@ -9,11 +9,13 @@
 <body>
 
    <style>
-      .container-chat {
+      .container {
          background-color: #F6F6F6;
+         margin: 10px;
          padding: 40px;
          height: 300px;
          width: 400px;
+         float: left;
          overflow: scroll;
       }
 
@@ -34,11 +36,31 @@
          clear: both;
       }
 
+      .sys-message {
+         background-color: #FF8383;
+         color: black;
+         text-align: center;
+      }
+
       .ext-message {
          background-color: #DBDBDB;
          color: black;
          float: left;
 
+      }
+
+      .send-button {
+         background-color: #1b9ddd;
+         border-radius: 10px;
+         border-width: 0px;
+         height: 30px;
+         color: white;
+         margin: 10px;
+         clear: both;
+      }
+
+      .send-button:disabled {
+         background-color: #333;
       }
 
       .own-message {
@@ -61,27 +83,64 @@
          <button id="createProfileButton">Create Profile</button>
          <br>
          <button disabled id="joinGame">Join Game</button>
+         <span id="timer"></span>
       </form>
    </header>
 
-   <section class="container-chat" id="chatMessages">
+   <section class="container" id="chatMessages"></section>
+   <section class="container" id="cardContainer"></section>
 
-   </section>
-
-   <input type="text" id="message" name="message" /><button id="send" disabled>SEND</button>
+   <input type="text" id="message" name="message" /><button id="send" class="send-button" disabled>SEND</button>
 
    <script type="text/javascript">
 
       let DEBUG = true;
 
       let messagesDiv = document.getElementById("chatMessages");
+      let cardContainer = document.getElementById("cardContainer");
       let createProfileButton = document.getElementById('createProfileButton');
       let nicknameInput = document.getElementById('nicknameInput');
       let nicknameColor = document.getElementById('nicknameColor');
 
       let sendBtn = document.getElementById('send');
       let joinGame = document.getElementById('joinGame');
-      let user = { nickname: "", color: "", lastmsg: "", room: "general" };
+      let timer = document.getElementById('timer');
+      let user = { nickname: "", color: "", lastmsg: "", room: "general", card: "" };
+
+      function setAccounter(remainingTime) {
+         timer.innerHTML = remainingTime;
+         setTimeout(() => {
+            remainingTime > 0 ? setAccounter(remainingTime - 1) : sendBtn.disabled = true;
+         }, 1000);
+      }
+
+      function renderCard(divRoot, player, cardMatrix, extractedBalls = null) {
+
+         let out = `<h1>Player ${player}</h1>
+                                   <table class='bingoCard'>
+                                      
+                                       `+
+            cardMatrix.map((value) =>
+               "<tr>" + value.map((val) => {
+                  if (val == null) {
+                     return "<th class='nulo'></th>"
+                  } else {
+                     if (extractedBalls && extractedBalls.indexOf(val) >= 0) {
+                        return "<th class='extracted'>" + val + "</th>";
+                     } else {
+                        return "<th>" + val + "</th>"
+                     }
+                  }
+               }).join("")
+               + "</tr>"
+            ).join("") +
+            `</table>`;
+
+         divRoot.innerHTML = out;
+
+         /* checkBingo(cardMatrix,extractedBalls,pubSub,player);  */
+         //return out;
+      }
 
       function WebSocketChat() {
          user.nickname = prompt("Select your nickname");
@@ -110,12 +169,27 @@
             joinGame.onclick = function (event) {
                event.preventDefault();
                console.log("joining", user);
+               joinGame.disabled = true;
                socket.emit('join game', user);
             };
 
             socket.on('connect', () => {
                socket.emit('hello', `${user.nickname} connected to the chat`);
             });
+            socket.on('system msg', (data) => {
+               console.log('join', data);
+               let msg = `
+                  <p class='message sys-message'">${data.msg} joined the room</p>
+               `
+               let parser = new DOMParser();
+               let element = parser.parseFromString(msg, "text/html");
+
+               messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
+            });
+            socket.on('card', (data) => {
+               user.card = data;
+               console.log(user);
+            })
             socket.on('join', (data) => {
                console.log('join', data);
                let msg = `
@@ -127,16 +201,22 @@
                messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
             });
             socket.on('joined player', (data) => {
+               console.log('joined player', data);
                let msg = `
-                  <p style="clear: both; text-align: center;">${data.players[0]} joined your game</p>
+                  <p style="clear: both; text-align: center;">${data.players[data.players.length - 1].nickname} joined your game</p>
                `
 
                user.room = data.id;
+               setAccounter(data.countDown);
+
+               renderCard(cardContainer, user.nickname, user.card);
 
                let parser = new DOMParser();
                let element = parser.parseFromString(msg, "text/html");
 
                messagesDiv.appendChild(element.getElementsByTagName('p')[0]);
+
+
             });
             socket.on('chat message', (data) => {
                console.log('Message recibido', data);

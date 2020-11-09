@@ -3,6 +3,7 @@ let app = express();
 const http = require('http').createServer(app);
 let io = require('socket.io')(http);
 let gameControler = require('./public/controllers/gameController.js');
+let cardGenerator = require('./public/controllers/card.js')
 
 
 app.use(express.static('public'));
@@ -26,9 +27,14 @@ io.on('connect', (socket) => {
     });
     socket.on('join game', data => {
         console.log('joined to game', data);
-        let game = gameControler.getCurrentGame(data.nickname);
+        let card = new cardGenerator();
+        let game = gameControler.getCurrentGame(data.nickname, card.getMatrix());
+
         socket.leave(data.room);
         socket.join(game.id);
+
+        console.log(socket);
+        io.to(socket.id).emit('card', card.getMatrix());
 
         io.sockets.in(game.id).emit('joined player', game);
         console.log(JSON.stringify(game));
